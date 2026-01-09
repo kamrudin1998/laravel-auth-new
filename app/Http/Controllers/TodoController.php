@@ -8,34 +8,29 @@ use Illuminate\Support\Facades\Auth;
 
 class TodoController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $todos = Todo::where('user_id', Auth::id())->latest()->get();
+        $todos = Todo::where(function ($query) {
+                $query->where('user_id', Auth::id())
+                      ->orWhere('status', 'public');
+            })
+            ->latest()
+            ->get();
+
         return view('todo.list', compact('todos'));
-
-
-        
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return view('todo.add');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'status' => 'required|in:public,private',
         ]);
 
         Todo::create([
@@ -43,15 +38,13 @@ class TodoController extends Controller
             'description' => $request->description,
             'user_id' => Auth::id(),
             'completed' => false,
+            'status' => $request->status,
         ]);
 
         return redirect()->route('todo.index')
             ->with('success', 'Todo successfully added');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
         $todo = Todo::where('user_id', Auth::id())
@@ -61,9 +54,6 @@ class TodoController extends Controller
         return view('todo.view', compact('todo'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit($id)
     {
         $todo = Todo::where('user_id', Auth::id())
@@ -73,14 +63,12 @@ class TodoController extends Controller
         return view('todo.edit', compact('todo'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'status' => 'required|in:public,private',
         ]);
 
         $todo = Todo::where('user_id', Auth::id())
@@ -91,15 +79,13 @@ class TodoController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'completed' => $request->has('completed'),
+            'status' => $request->status,
         ]);
 
         return redirect()->route('todo.index')
-            ->with('success', 'Todo successfully updated');
+            ->with('success', 'Todo updated successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
         $todo = Todo::where('user_id', Auth::id())

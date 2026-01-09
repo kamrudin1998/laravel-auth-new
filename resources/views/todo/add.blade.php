@@ -24,12 +24,18 @@
                         <div class="mb-3">
                             <label class="form-label">Description</label>
                             <textarea 
-                                name="description" 
+                                name="description"    
                                 class="form-control" 
                                 rows="3"
                                 placeholder="Enter description (optional)">
                             </textarea>
                         </div>
+                    
+                        <label>Status</label>
+                            <select name="status" class="form-control">
+                            <option value="private">Private</option>
+                            <option value="public">Public</option>
+                        </select>
 
                         <div class="d-flex justify-content-between">
                             <a href="{{ route('todo.index') }}" class="btn btn-secondary">
