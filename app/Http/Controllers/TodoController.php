@@ -18,7 +18,7 @@ class TodoController extends Controller
             ->latest()
             ->get();
 
-        return view('todo.list', compact('todos')); #OR ['todos' => $todos]]
+        return view('todo.list', compact('todos'));
     }
 
     public function create()
@@ -31,16 +31,16 @@ class TodoController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'completed' => 'required|boolean',
+            'progress' => 'required|in:pending,inprogress,completed',
             'status' => 'required|in:public,private',
         ]);
 
         Todo::create([
             'title' => $request->title,
             'description' => $request->description,
-            'user_id' => Auth::id(),
-            'completed' => $request->completed,
+            'progress' => $request->progress,
             'status' => $request->status,
+            'user_id' => Auth::id(),
         ]);
 
         return redirect()->route('todo.index')
@@ -50,12 +50,12 @@ class TodoController extends Controller
     public function show($id)
     {
         $todo = Todo::with('comments.user')
-                    ->where(function ($query) {
-                        $query->where('user_id', Auth::id())
-                              ->orWhere('status', 'public');
-                    })
-                    ->where('id', $id)
-                    ->firstOrFail();
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())
+                      ->orWhere('status', 'public');
+            })
+            ->where('id', $id)
+            ->firstOrFail();
 
         return view('todo.view', compact('todo'));
     }
@@ -63,8 +63,8 @@ class TodoController extends Controller
     public function edit($id)
     {
         $todo = Todo::where('user_id', Auth::id())
-                    ->where('id', $id)
-                    ->firstOrFail();
+            ->where('id', $id)
+            ->firstOrFail();
 
         return view('todo.edit', compact('todo'));
     }
@@ -74,17 +74,18 @@ class TodoController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'progress' => 'required|in:pending,inprogress,completed',
             'status' => 'required|in:public,private',
         ]);
 
         $todo = Todo::where('user_id', Auth::id())
-                    ->where('id', $id)
-                    ->firstOrFail();
+            ->where('id', $id)
+            ->firstOrFail();
 
         $todo->update([
             'title' => $request->title,
             'description' => $request->description,
-            'completed' => $request->has('completed'),
+            'progress' => $request->progress,
             'status' => $request->status,
         ]);
 
@@ -95,8 +96,8 @@ class TodoController extends Controller
     public function destroy($id)
     {
         $todo = Todo::where('user_id', Auth::id())
-                    ->where('id', $id)
-                    ->firstOrFail();
+            ->where('id', $id)
+            ->firstOrFail();
 
         $todo->delete();
 
@@ -111,8 +112,8 @@ class TodoController extends Controller
         ]);
 
         $todo = Todo::where('id', $id)
-                    ->where('status', 'public')
-                    ->firstOrFail();
+            ->where('status', 'public')
+            ->firstOrFail();
 
         Comment::create([
             'todo_id' => $todo->id,

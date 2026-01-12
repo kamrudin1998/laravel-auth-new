@@ -12,13 +12,14 @@ class Todo extends Model
     
 
 
-    protected $fillable = [
+protected $fillable = [
     'title',
     'description',
-    'user_id',
-    'completed',
-    'status'
+    'progress',
+    'status',
+    'user_id'
 ];
+
 
     public function comments()
     {

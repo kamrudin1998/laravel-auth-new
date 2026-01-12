@@ -24,14 +24,6 @@
                 </div>
             @endif
 
-            {{-- Error Message --}}
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    {{ session('error') }}
-                    <button class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
-
             <table class="table table-hover table-bordered align-middle text-center">
                 <thead class="table-dark">
                     <tr>
@@ -51,24 +43,37 @@
                         <td class="text-start">
                             <strong>{{ $todo->title }}</strong><br>
 
-                            @if(!empty($todo->description))
-                                <small class="text-muted">
-                                    {{ $todo->description }}
-                                </small>
-                            @else
-                                <small class="text-muted fst-italic">
-                                    No description
-                                </small>
-                            @endif
+                            <small class="text-muted">
+                                {{ $todo->description ?? 'No description' }}
+                            </small>
                         </td>
 
-                        {{-- STATUS --}}
+                        {{-- PROGRESS STATUS --}}
                         <td>
-                            @if($todo->completed)
-                                <span class="badge bg-success">Completed</span>
-                            @else
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            @endif
+                            @switch($todo->progress ?? 'pending')
+                                @case('pending')
+                                    <span class="badge bg-warning text-dark">
+                                        Pending
+                                    </span>
+                                    @break
+
+                                @case('inprogress')
+                                    <span class="badge bg-info text-dark">
+                                        In Progress
+                                    </span>
+                                    @break
+
+                                @case('completed')
+                                    <span class="badge bg-success">
+                                        Completed
+                                    </span>
+                                    @break
+
+                                @default
+                                    <span class="badge bg-secondary">
+                                        Unknown
+                                    </span>
+                            @endswitch
                         </td>
 
                         {{-- ACTION --}}
@@ -88,19 +93,18 @@
                                         onclick="return confirm('Are you sure?')">
                                     <i class="fa fa-trash"></i>
                                 </button>
-
-                                <a href="{{ route('todo.show', $todo->id) }}"
-                                     class="btn btn-sm btn-info">
-                                     View
-                                    </a>
-
                             </form>
+
+                            <a href="{{ route('todo.show', $todo->id) }}"
+                               class="btn btn-info btn-sm">
+                                View
+                            </a>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4">
-                            <span class="text-muted">No todos found</span>
+                        <td colspan="4" class="text-muted">
+                            No todos found
                         </td>
                     </tr>
                 @endforelse

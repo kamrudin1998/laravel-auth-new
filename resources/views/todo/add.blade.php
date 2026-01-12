@@ -39,12 +39,13 @@
                         <!-- Progress Status -->
                         <div class="mb-3">
                             <label class="form-label">Progress Status</label>
-                            <select name="completed" class="form-control">
-                                <option value="0">Pending</option>
-                                <option value="1">Completed</option>
+                            <select name="progress" class="form-control" required>
+                            <option value="pending">Pending</option>
+                                <option value="inprogress">In Progress</option>
+                                <option value="completed">Completed</option>
                             </select>
-                        </div>
-
+                        </div>      
+                        
                         <!-- Visibility Status -->
                         <div class="mb-3">
                             <label class="form-label">Visibility</label>
