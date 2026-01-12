@@ -88,6 +88,12 @@
                                         onclick="return confirm('Are you sure?')">
                                     <i class="fa fa-trash"></i>
                                 </button>
+
+                                <a href="{{ route('todo.show', $todo->id) }}"
+                                     class="btn btn-sm btn-info">
+                                     View
+                                    </a>
+
                             </form>
                         </td>
                     </tr>

@@ -20,4 +20,13 @@ Route::get('/', function () {
     Route::resource('todo', TodoController::class);
 });
 
+    Route::get('/todo/{id}', [TodoController::class, 'show'])
+    ->name('todo.show');
+    
+    Route::post('/todo/{id}/comment', [TodoController::class, 'storeComment'])
+    ->name('todo.comment');
+
+
+
+
 require __DIR__.'/auth.php';

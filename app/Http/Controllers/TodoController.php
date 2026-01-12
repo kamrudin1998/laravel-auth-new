@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Todo;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,7 +18,7 @@ class TodoController extends Controller
             ->latest()
             ->get();
 
-        return view('todo.list', compact('todos'));
+        return view('todo.list', compact('todos')); #OR ['todos' => $todos]]
     }
 
     public function create()
@@ -30,6 +31,7 @@ class TodoController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'completed' => 'required|boolean',
             'status' => 'required|in:public,private',
         ]);
 
@@ -37,17 +39,21 @@ class TodoController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'user_id' => Auth::id(),
-            'completed' => false,
+            'completed' => $request->completed,
             'status' => $request->status,
         ]);
 
         return redirect()->route('todo.index')
-            ->with('success', 'Todo successfully added');
+            ->with('success', 'Task successfully added');
     }
 
     public function show($id)
     {
-        $todo = Todo::where('user_id', Auth::id())
+        $todo = Todo::with('comments.user')
+                    ->where(function ($query) {
+                        $query->where('user_id', Auth::id())
+                              ->orWhere('status', 'public');
+                    })
                     ->where('id', $id)
                     ->firstOrFail();
 
@@ -96,5 +102,25 @@ class TodoController extends Controller
 
         return redirect()->route('todo.index')
             ->with('success', 'Todo deleted successfully');
+    }
+
+    public function storeComment(Request $request, $id)
+    {
+        $request->validate([
+            'comment' => 'required|string|max:1000',
+        ]);
+
+        $todo = Todo::where('id', $id)
+                    ->where('status', 'public')
+                    ->firstOrFail();
+
+        Comment::create([
+            'todo_id' => $todo->id,
+            'user_id' => Auth::id(),
+            'comment' => $request->comment,
+        ]);
+
+        return redirect()->route('todo.show', $id)
+            ->with('success', 'Comment added successfully');
     }
 }
