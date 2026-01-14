@@ -1,3 +1,137 @@
+# Laravel Auth New
+
+A small Laravel application that demonstrates authentication and a Todo list with comments.
+
+## Overview
+
+This project is a Laravel app containing a simple Todo system with user authentication, public/private todos, progress states, and comments. It includes standard controllers, models, migrations, seeders, Blade views, and Pest tests.
+
+## Requirements
+
+- PHP 8.x
+- Composer
+- Node.js & npm (for front-end assets)
+- MySQL / MariaDB (or another supported DB)
+- XAMPP (optional; this repo was used with XAMPP on Windows)
+
+## Quick setup
+
+1. Install PHP dependencies:
+
+```bash
+composer install
+```
+
+2. Install JS dependencies and build assets (dev):
+
+```bash
+npm install
+npm run dev
+```
+
+3. Copy `.env` and generate an app key:
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+4. Configure database settings in `.env` (DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD).
+
+5. Run migrations and seeders:
+
+```bash
+php artisan migrate
+php artisan db:seed
+```
+
+6. Run the app (built-in server):
+
+```bash
+php artisan serve
+```
+
+Or use your local webserver (XAMPP) and point to the `public` directory.
+
+## Tests
+
+Run tests with Pest (installed in vendor):
+
+```bash
+./vendor/bin/pest
+```
+
+Or with PHPUnit:
+
+```bash
+./vendor/bin/phpunit
+```
+
+## Database
+
+Migrations are located in `database/migrations`. Important tables:
+
+- `users` — default Laravel users table
+- `todos` — todos with `title`, `description`, `progress`, `status`, and `user_id`
+- `comments` — comments attached to todos
+
+Seeders are in `database/seeders` (e.g., `UsersTableSeeder`).
+
+## Models
+
+- `App\Models\User` — typical Laravel user model
+- `App\Models\Todo` — todo model; likely has relations `comments()` and `user()`
+- `App\Models\Comment` — comment model; likely has `user()` and `todo()` relations
+
+## Controllers and Routes
+
+Main controller for Todo functionality: `App\Http\Controllers\TodoController`.
+
+Key methods in `TodoController`:
+
+- `index(Request $request)` — lists todos (private for owner, or public). Supports `search` query and pagination.
+- `create()` — shows the add-todo form.
+- `store(Request $request)` — validates and creates a new todo.
+- `show($id)` — shows a single todo and its comments (only if allowed by policy/public status).
+- `edit($id)` — shows edit form for the user's todo.
+- `update(Request $request, $id)` — validates and updates the user's todo.
+- `destroy($id)` — deletes a user's todo.
+- `storeComment(Request $request, $id)` — validates and stores a comment for a public todo.
+
+Route names used in controllers (examples): `todo.index`, `todo.show`.
+
+To find the actual routes, open `routes/web.php` and `routes/auth.php`.
+
+File: [app/Http/Controllers/TodoController.php](app/Http/Controllers/TodoController.php)
+
+## Views
+
+Blade templates live in `resources/views` and include views under `todo/` for list, add, edit, and view pages.
+
+## Common commands
+
+- Install PHP deps: `composer install`
+- Install JS deps: `npm install`
+- Build assets (dev): `npm run dev`
+- Run migrations: `php artisan migrate`
+- Run seeders: `php artisan db:seed`
+- Serve app: `php artisan serve`
+- Lint a PHP file: `php -l path/to/file.php`
+- Run tests: `./vendor/bin/pest` or `./vendor/bin/phpunit`
+
+## Troubleshooting
+
+- Ensure `.env` DB credentials match your local DB and the DB exists.
+- If migrations fail, run `php artisan migrate:fresh --seed` to recreate schema (CAUTION: destroys data).
+- For permission issues on storage, run `php artisan storage:link` and ensure webserver user has write permission.
+
+## Contributing
+
+Open an issue or send a PR. Keep changes focused and add tests for new behavior.
+
+---
+
+If you'd like, I can also generate an API-style route list, document specific Blade views, or add examples of requests/responses for each `TodoController` action.
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

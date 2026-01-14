@@ -9,14 +9,21 @@ use Illuminate\Support\Facades\Auth;
 
 class TodoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $todos = Todo::where(function ($query) {
-                $query->where('user_id', Auth::id())
-                      ->orWhere('status', 'public');
-            })
-            ->latest()
-            ->get();
+        $query = Todo::where(function ($q) {
+            $q->where('user_id', Auth::id())
+              ->orWhere('status', 'public');
+        });
+
+        //  Search by title
+        if ($request->filled('search')) {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        $todos = $query->latest()
+                       ->paginate(5)
+                       ->withQueryString();
 
         return view('todo.list', compact('todos'));
     }
@@ -50,9 +57,9 @@ class TodoController extends Controller
     public function show($id)
     {
         $todo = Todo::with('comments.user')
-            ->where(function ($query) {
-                $query->where('user_id', Auth::id())
-                      ->orWhere('status', 'public');
+            ->where(function ($q) {
+                $q->where('user_id', Auth::id())
+                  ->orWhere('status', 'public');
             })
             ->where('id', $id)
             ->firstOrFail();
@@ -90,7 +97,7 @@ class TodoController extends Controller
         ]);
 
         return redirect()->route('todo.index')
-            ->with('success', 'Todo updated successfully');
+            ->with('success', 'Task updated successfully');
     }
 
     public function destroy($id)
@@ -102,7 +109,7 @@ class TodoController extends Controller
         $todo->delete();
 
         return redirect()->route('todo.index')
-            ->with('success', 'Todo deleted successfully');
+            ->with('success', 'Task deleted successfully');
     }
 
     public function storeComment(Request $request, $id)
