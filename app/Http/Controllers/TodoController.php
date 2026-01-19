@@ -9,51 +9,110 @@ use Illuminate\Support\Facades\Auth;
 
 class TodoController extends Controller
 {
+    /**
+     * Dashboard: user todos + public todos
+     */
     public function index(Request $request)
     {
+        // Base query (own + public todos)
         $query = Todo::where(function ($q) {
-            $q->where('user_id', Auth::id())
+            $q->where('user_id', auth()->id())
               ->orWhere('status', 'public');
         });
 
-        //  Search by title
+        // Search by title
         if ($request->filled('search')) {
             $query->where('title', 'like', '%' . $request->search . '%');
         }
 
-        $todos = $query->latest()
-                       ->paginate(5)
-                       ->withQueryString();
+        // Main todos (sorted & paginated)
+        $todos = $query
+            // 1️⃣ Overdue tasks first
+            ->orderByRaw("
+                CASE 
+                    WHEN due_date IS NOT NULL
+                     AND due_date < CURDATE()
+                     AND progress != 'completed'
+                    THEN 0
+                    ELSE 1
+                END
+            ")
 
-        return view('todo.list', compact('todos'));
+            // Priority order
+            ->orderByRaw("
+                CASE priority
+                    WHEN 'high' THEN 1
+                    WHEN 'medium' THEN 2
+                    WHEN 'low' THEN 3
+                END
+            ")
+
+            // Nearest due date
+            ->orderBy('due_date')
+
+            // Newest first
+            ->orderByDesc('created_at')
+
+            ->paginate(5)
+            ->withQueryString();
+
+        //Overdue todos (list)
+        $overdueTodos = Todo::where('user_id', auth()->id())
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<', now())
+            ->where('progress', '!=', 'completed')
+            ->orderBy('due_date')
+            ->get();
+
+        //Overdue count (badge / stats)
+        $overdueCount = Todo::where('user_id', auth()->id())
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<', now())
+            ->where('progress', '!=', 'completed')
+            ->count();
+
+        return view('todo.list', compact(
+            'todos',
+            'overdueTodos',
+            'overdueCount'
+        ));
     }
-
     public function create()
     {
         return view('todo.add');
     }
 
+    /**
+     * Store new todo
+     */
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
-            'progress' => 'required|in:pending,inprogress,completed',
-            'status' => 'required|in:public,private',
+            'progress'    => 'required|in:pending,inprogress,completed',
+            'status'      => 'required|in:public,private',
+            'due_date'    => 'nullable|date',
+            'priority'    => 'required|in:low,medium,high',
         ]);
 
         Todo::create([
-            'title' => $request->title,
+            'title'       => $request->title,
             'description' => $request->description,
-            'progress' => $request->progress,
-            'status' => $request->status,
-            'user_id' => Auth::id(),
+            'progress'    => $request->progress,
+            'status'      => $request->status,
+            'due_date'    => $request->due_date,
+            'priority'    => $request->priority,
+            'user_id'     => Auth::id(),
         ]);
 
         return redirect()->route('todo.index')
             ->with('success', 'Task successfully added');
     }
 
+    /**
+     * View single todo
+     */
     public function show($id)
     {
         $todo = Todo::with('comments.user')
@@ -67,6 +126,9 @@ class TodoController extends Controller
         return view('todo.view', compact('todo'));
     }
 
+    /**
+     * Show edit form (owner only)
+     */
     public function edit($id)
     {
         $todo = Todo::where('user_id', Auth::id())
@@ -76,13 +138,18 @@ class TodoController extends Controller
         return view('todo.edit', compact('todo'));
     }
 
+    /**
+     * Update todo
+     */
     public function update(Request $request, $id)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
-            'progress' => 'required|in:pending,inprogress,completed',
-            'status' => 'required|in:public,private',
+            'progress'    => 'required|in:pending,inprogress,completed',
+            'status'      => 'required|in:public,private',
+            'due_date'    => 'nullable|date',
+            'priority'    => 'required|in:low,medium,high',
         ]);
 
         $todo = Todo::where('user_id', Auth::id())
@@ -90,16 +157,21 @@ class TodoController extends Controller
             ->firstOrFail();
 
         $todo->update([
-            'title' => $request->title,
+            'title'       => $request->title,
             'description' => $request->description,
-            'progress' => $request->progress,
-            'status' => $request->status,
+            'progress'    => $request->progress,
+            'status'      => $request->status,
+            'due_date'    => $request->due_date,
+            'priority'    => $request->priority,
         ]);
 
         return redirect()->route('todo.index')
             ->with('success', 'Task updated successfully');
     }
 
+    /**
+     * Delete todo
+     */
     public function destroy($id)
     {
         $todo = Todo::where('user_id', Auth::id())
@@ -112,6 +184,9 @@ class TodoController extends Controller
             ->with('success', 'Task deleted successfully');
     }
 
+    /**
+     * Store comment on public todo
+     */
     public function storeComment(Request $request, $id)
     {
         $request->validate([

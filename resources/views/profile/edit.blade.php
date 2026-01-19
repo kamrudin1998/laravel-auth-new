@@ -12,10 +12,31 @@
                 </div>
 
                 <div class="card-body">
-                    <form method="POST" action="{{ route('profile.update') }}">
+                    <form method="POST"
+                          action="{{ route('profile.update') }}"
+                          enctype="multipart/form-data">
                         @csrf
                         @method('PATCH')
 
+                        {{-- PROFILE PHOTO --}}
+                        <div class="mb-4 text-center">
+                            <img
+                                src="{{ auth()->user()->profile_photo
+                                    ? asset('storage/' . auth()->user()->profile_photo)
+                                    : 'https://ui-avatars.com/api/?name=' . auth()->user()->name }}"
+                                width="120"
+                                height="120"
+                                class="rounded-circle mb-3"
+                                style="object-fit:cover;">
+
+                            <div class="mb-2">
+                                <input type="file"
+                                       name="profile_photo"
+                                       class="form-control">
+                            </div>
+                        </div>
+
+                        {{-- NAME --}}
                         <div class="mb-3">
                             <label class="form-label">Name</label>
                             <input type="text"
@@ -25,6 +46,7 @@
                                    required>
                         </div>
 
+                        {{-- EMAIL --}}
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email"

@@ -4,6 +4,8 @@
 <div class="container mt-4">
 
     <div class="row justify-content-center">
+
+    
         <div class="col-md-6">
 
             <div class="card shadow-sm">
@@ -24,6 +26,7 @@
                                    name="title"
                                    class="form-control"
                                    placeholder="Enter task title"
+                                   value="{{ old('title') }}"
                                    required>
                         </div>
 
@@ -33,16 +36,35 @@
                             <textarea name="description"
                                       class="form-control"
                                       rows="3"
-                                      placeholder="Optional description"></textarea>
+                                      placeholder="Optional description">{{ old('description') }}</textarea>
+                        </div>
+
+                        <!-- Due Date -->
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date"
+                                   name="due_date"
+                                   class="form-control"
+                                   value="{{ old('due_date') }}">
+                        </div>
+
+                        <!-- Priority -->
+                        <div class="mb-3">
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-control" required>
+                                <option value="low" {{ old('priority') == 'low' ? 'selected' : '' }}>Low</option>
+                                <option value="medium" {{ old('priority', 'medium') == 'medium' ? 'selected' : '' }}>Medium</option>
+                                <option value="high" {{ old('priority') == 'high' ? 'selected' : '' }}>High</option>
+                            </select>
                         </div>
 
                         <!-- Progress Status -->
                         <div class="mb-3">
                             <label class="form-label">Progress Status</label>
                             <select name="progress" class="form-control" required>
-                            <option value="pending">Pending</option>
-                                <option value="inprogress">In Progress</option>
-                                <option value="completed">Completed</option>
+                                <option value="pending" {{ old('progress') == 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value="inprogress" {{ old('progress') == 'inprogress' ? 'selected' : '' }}>In Progress</option>
+                                <option value="completed" {{ old('progress') == 'completed' ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>      
                         
@@ -50,19 +72,17 @@
                         <div class="mb-3">
                             <label class="form-label">Visibility</label>
                             <select name="status" class="form-control">
-                                <option value="private">Private</option>
-                                <option value="public">Public</option>
+                                <option value="private" {{ old('status') == 'private' ? 'selected' : '' }}>Private</option>
+                                <option value="public" {{ old('status') == 'public' ? 'selected' : '' }}>Public</option>
                             </select>
                         </div>
 
                         <!-- Buttons -->
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('todo.index') }}"
-                               class="btn btn-secondary">
+                            <a href="{{ route('todo.index') }}" class="btn btn-secondary">
                                 Back
                             </a>
-                            <button type="submit"
-                                    class="btn btn-success">
+                            <button type="submit" class="btn btn-success">
                                 Add Task
                             </button>
                         </div>
