@@ -4,78 +4,39 @@ namespace App\Http\Controllers;
 
 use App\Models\Todo;
 use App\Models\Comment;
+use App\Services\TodoService;
+use App\Http\Requests\StoreTodoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TodoController extends Controller
 {
     /**
-     * Dashboard: user todos + public todos
+     * Inject TodoService
+     */
+    public function __construct(protected TodoService $todoService)
+    {
+    }
+
+    /**
+     * Display list of todos with filtering and sorting
+     * ✅ OPTIMIZED: Delegates to service for cleaner controller
      */
     public function index(Request $request)
     {
-        // Base query (own + public todos)
-        $query = Todo::where(function ($q) {
-            $q->where('user_id', auth()->id())
-              ->orWhere('status', 'public');
-        });
+        $data = $this->todoService->getUserTodos(
+            auth()->id(),
+            [
+                'search' => $request->input('search'),
+                'per_page' => $request->input('per_page', 10),
+            ]
+        );
 
-        // Search by title
-        if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
-
-        // Main todos (sorted & paginated)
-        $todos = $query
-            // 1️⃣ Overdue tasks first
-            ->orderByRaw("
-                CASE 
-                    WHEN due_date IS NOT NULL
-                     AND due_date < CURDATE()
-                     AND progress != 'completed'
-                    THEN 0
-                    ELSE 1
-                END
-            ")
-
-            // Priority order
-            ->orderByRaw("
-                CASE priority
-                    WHEN 'high' THEN 1
-                    WHEN 'medium' THEN 2
-                    WHEN 'low' THEN 3
-                END
-            ")
-
-            // Nearest due date
-            ->orderBy('due_date')
-
-            // Newest first
-            ->orderByDesc('created_at')
-
-            ->paginate(5)
-            ->withQueryString();
-
-        //Overdue todos (list)
-        $overdueTodos = Todo::where('user_id', auth()->id())
-            ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', now())
-            ->where('progress', '!=', 'completed')
-            ->orderBy('due_date')
-            ->get();
-
-        //Overdue count (badge / stats)
-        $overdueCount = Todo::where('user_id', auth()->id())
-            ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', now())
-            ->where('progress', '!=', 'completed')
-            ->count();
-
-        return view('todo.list', compact(
-            'todos',
-            'overdueTodos',
-            'overdueCount'
-        ));
+        return view('todo.list', [
+            'todos' => $data['todos'],
+            'overdueTodos' => $data['overdue_todos'],
+            'overdueCount' => $data['overdue_count'],
+        ]);
     }
     public function create()
     {
@@ -84,27 +45,11 @@ class TodoController extends Controller
 
     /**
      * Store new todo
+     * ✅ OPTIMIZED: Uses centralized StoreTodoRequest for validation
      */
-    public function store(Request $request)
+    public function store(StoreTodoRequest $request)
     {
-        $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'progress'    => 'required|in:pending,inprogress,completed',
-            'status'      => 'required|in:public,private',
-            'due_date'    => 'nullable|date',
-            'priority'    => 'required|in:low,medium,high',
-        ]);
-
-        Todo::create([
-            'title'       => $request->title,
-            'description' => $request->description,
-            'progress'    => $request->progress,
-            'status'      => $request->status,
-            'due_date'    => $request->due_date,
-            'priority'    => $request->priority,
-            'user_id'     => Auth::id(),
-        ]);
+        $this->todoService->createTodo(auth()->id(), $request->validated());
 
         return redirect()->route('todo.index')
             ->with('success', 'Task successfully added');
@@ -115,55 +60,38 @@ class TodoController extends Controller
      */
     public function show($id)
     {
-        $todo = Todo::with('comments.user')
-            ->where(function ($q) {
-                $q->where('user_id', Auth::id())
-                  ->orWhere('status', 'public');
-            })
-            ->where('id', $id)
-            ->firstOrFail();
+        $todo = $this->todoService->getTodoWithVisibility($id, auth()->id());
+
+        if (!$todo) {
+            abort(404, 'Todo not found or not accessible');
+        }
 
         return view('todo.view', compact('todo'));
     }
 
     /**
      * Show edit form (owner only)
+     * ✅ OPTIMIZED: Use model scope + authorization
      */
     public function edit($id)
     {
-        $todo = Todo::where('user_id', Auth::id())
-            ->where('id', $id)
-            ->firstOrFail();
+        $todo = Todo::forUser(auth()->id())
+            ->findOrFail($id);
 
         return view('todo.edit', compact('todo'));
     }
 
     /**
      * Update todo
+     * ✅ OPTIMIZED: Use model scope + centralized validation
      */
-    public function update(Request $request, $id)
+    public function update(StoreTodoRequest $request, $id)
     {
-        $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'progress'    => 'required|in:pending,inprogress,completed',
-            'status'      => 'required|in:public,private',
-            'due_date'    => 'nullable|date',
-            'priority'    => 'required|in:low,medium,high',
-        ]);
+        // Get todo and check ownership using scope
+        $todo = Todo::forUser(auth()->id())
+            ->findOrFail($id);
 
-        $todo = Todo::where('user_id', Auth::id())
-            ->where('id', $id)
-            ->firstOrFail();
-
-        $todo->update([
-            'title'       => $request->title,
-            'description' => $request->description,
-            'progress'    => $request->progress,
-            'status'      => $request->status,
-            'due_date'    => $request->due_date,
-            'priority'    => $request->priority,
-        ]);
+        $this->todoService->updateTodo($todo, $request->validated());
 
         return redirect()->route('todo.index')
             ->with('success', 'Task updated successfully');
@@ -171,14 +99,14 @@ class TodoController extends Controller
 
     /**
      * Delete todo
+     * ✅ OPTIMIZED: Use model scope
      */
     public function destroy($id)
     {
-        $todo = Todo::where('user_id', Auth::id())
-            ->where('id', $id)
-            ->firstOrFail();
+        $todo = Todo::forUser(auth()->id())
+            ->findOrFail($id);
 
-        $todo->delete();
+        $this->todoService->deleteTodo($todo);
 
         return redirect()->route('todo.index')
             ->with('success', 'Task deleted successfully');
@@ -189,19 +117,20 @@ class TodoController extends Controller
      */
     public function storeComment(Request $request, $id)
     {
-        $request->validate([
-            'comment' => 'required|string|max:1000',
+        $validated = $request->validate([
+            'comment' => 'required|string|min:1|max:1000',
         ]);
 
-        $todo = Todo::where('id', $id)
-            ->where('status', 'public')
-            ->firstOrFail();
+        $comment = $this->todoService->addComment(
+            $id,
+            auth()->id(),
+            $validated['comment']
+        );
 
-        Comment::create([
-            'todo_id' => $todo->id,
-            'user_id' => Auth::id(),
-            'comment' => $request->comment,
-        ]);
+        if (!$comment) {
+            return redirect()->route('todo.index')
+                ->with('error', 'Todo not found or not public');
+        }
 
         return redirect()->route('todo.show', $id)
             ->with('success', 'Comment added successfully');

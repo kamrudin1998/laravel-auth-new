@@ -24,7 +24,7 @@
         <!-- Logo/Header -->
         <div class="text-center mb-12">
             <div class="text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                <i class="fas fa-tasks mr-3"></i>TodoApp
+                <i class="fas fa-tasks mr-3"></i>Task App
             </div>
             <p class="text-gray-300 text-xl">Manage your tasks efficiently and stay organized</p>
         </div>

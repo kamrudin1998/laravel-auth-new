@@ -13,7 +13,7 @@
                     <div class="text-2xl text-blue-400">
                         <i class="fas fa-tasks"></i>
                     </div>
-                    <span>TodoApp</span>
+                    <span>Dashboard</span>
                 </x-nav-link>
 
                 {{-- MY TASKS --}}
